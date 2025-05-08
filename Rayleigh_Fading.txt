@@ -1,0 +1,46 @@
+clc; clear; close all;
+
+% Parameters
+N = 10^6;  % Number of bits (symbols)
+Eb_No_dB = -5:2:20; % Eb/No range in dB
+nErr = zeros(1, length(Eb_No_dB)); % Error counter
+
+% Transmitter: Generate random 0s and 1s
+ip = randi([0,1],1,N);
+s = 2*ip - 1; % BPSK modulation (0 -> -1, 1 -> +1)
+
+for i = 1:length(Eb_No_dB)
+    % Rayleigh fading channel
+    h = (1/sqrt(2)) * (randn(1,N) + 1j*randn(1,N)); % Rayleigh fading coefficient
+
+    % Noise
+    n = (1/sqrt(2)) * (randn(1,N) + 1j*randn(1,N)); % AWGN noise
+
+    % Received signal: y = h*s + n
+    y = h .* s + 10^(-Eb_No_dB(i)/20) * n;
+
+    % Equalization (Coherent Detection)
+    y_eq = real(y ./ h); % Divide by channel to remove fading
+
+    % Receiver - Hard decision decoding
+    ipHat = y_eq > 0;
+
+    % Count errors
+    nErr(i) = sum(ip ~= ipHat);
+end
+
+% Simulated BER
+simBer = nErr / N;
+
+% Theoretical BER for BPSK in Rayleigh fading
+theoryBer = 0.5 * (1 - sqrt(10.^(Eb_No_dB/10) ./ (1 + 10.^(Eb_No_dB/10))));
+
+% Plot results
+semilogy(Eb_No_dB, theoryBer, 'b.-', 'LineWidth', 2); hold on;
+semilogy(Eb_No_dB, simBer, 'mx-', 'LineWidth', 2);
+grid on;
+axis([-5 20 10^-5 0.5]);
+legend('Theoretical BER', 'Simulated BER');
+xlabel('Eb/No (dB)');
+ylabel('Bit Error Rate');
+title('BER for BPSK in Rayleigh Fading Channel');
